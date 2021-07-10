@@ -57,10 +57,10 @@ local ENCODER = CNN_FIELDS(
     dropout: DROPOUT,
   },
   data_loader: {
-    batch_size: 64,
+    batch_size: 256,
   },
   trainer: {
-    cuda_device: std.parseInt(std.extVar("CUDA_DEVICE")),
+    // cuda_device: 0,
     num_epochs: 30,
     optimizer: {
       lr: 0.1,
@@ -71,11 +71,10 @@ local ENCODER = CNN_FIELDS(
     callbacks: [
       {
         type: 'optuna_pruner',
-        monitor: 'best_validation_loss',
       },
     ],
   },
-  // distributed: {
-  //   cuda_devices: [0, 1, 2, 3],
-  // },
+  distributed: {
+    cuda_devices: std.parseJson(std.extVar("CUDA_DEVICES")),
+  },
 }

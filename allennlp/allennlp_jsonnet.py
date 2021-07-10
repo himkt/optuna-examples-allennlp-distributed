@@ -9,12 +9,15 @@ we here use the validation dataset instead.
 
 """
 
-import os.path
+import argparse
+import json
+import os
 import shutil
+import uuid
 
 import optuna
-from optuna.integration import AllenNLPExecutor
 from optuna.integration.allennlp import dump_best_config
+from optuna.integration import AllenNLPExecutor
 from packaging import version
 
 import allennlp
@@ -23,25 +26,46 @@ import allennlp
 # This path trick is used since this example is also
 # run from the root of this repository by CI.
 EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(EXAMPLE_DIR, "classifier.jsonnet")
-MODEL_DIR = "result"
 BEST_CONFIG_PATH = "best_classifier.json"
 
 
-def objective(trial):
-    trial.suggest_float("DROPOUT", 0.0, 0.5)
-    trial.suggest_int("EMBEDDING_DIM", 20, 50)
-    trial.suggest_int("MAX_FILTER_SIZE", 3, 6)
-    trial.suggest_int("NUM_FILTERS", 16, 32)
-    trial.suggest_int("HIDDEN_SIZE", 16, 32)
+def create_objective(config_file_name, model_dir):
+    def objective(trial):
+        trial.suggest_float("DROPOUT", 0.0, 1.0)
+        trial.suggest_int("EMBEDDING_DIM", 16, 64)
+        trial.suggest_int("MAX_FILTER_SIZE", 3, 6)
+        trial.suggest_int("NUM_FILTERS", 16, 32)
+        trial.suggest_int("HIDDEN_SIZE", 16, 32)
 
-    serialization_dir = os.path.join(MODEL_DIR, "test_{}".format(trial.number))
-    executor = AllenNLPExecutor(trial, CONFIG_PATH, serialization_dir, force=True)
+        config_path = os.path.join(EXAMPLE_DIR, config_file_name)
+        serialization_dir = os.path.join(model_dir, "test_{}".format(trial.number))
+        executor = AllenNLPExecutor(trial, config_path, serialization_dir, force=True)
 
-    return executor.run()
+        return executor.run()
+    return objective
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", nargs="+", default=[-1], type=int)
+    parser.add_argument("--storage", default="sqlite:///allennlp.db")
+    args = parser.parse_args()
+    study_name_suffix = str(uuid.uuid4())
+
+    # Note: It needs to set  `CUDA_DEVICE` or `CUDA_DEVICES` in
+    # environment variables to tell available device(s) to jsonnet config.
+
+    if len(args.device) == 1:
+        config_file_name = "classifier.jsonnet"
+        model_dir = os.path.join("result_single", study_name_suffix)
+        study_name = f"allennlp_jsonnet_single_{study_name_suffix}"
+        os.environ["CUDA_DEVICE"] = str(args.device[0])
+    else:
+        config_file_name = "classifier_distributed.jsonnet"
+        model_dir = os.path.join("result_multi", study_name_suffix)
+        study_name = f"allennlp_jsonnet_multi_{study_name_suffix}"
+        os.environ["CUDA_DEVICES"] = json.dumps(args.device)
+
     if version.parse(allennlp.__version__) < version.parse("2.0.0"):
         raise RuntimeError(
             "`allennlp>=2.0.0` is required for this example."
@@ -52,12 +76,15 @@ if __name__ == "__main__":
 
     study = optuna.create_study(
         direction="maximize",
-        storage="sqlite:///allennlp.db",
-        pruner=optuna.pruners.HyperbandPruner(),
+        storage=args.storage,
+        pruner=optuna.pruners.MedianPruner(),
         sampler=optuna.samplers.TPESampler(seed=10),
+        study_name=study_name,
+        load_if_exists=True,
     )
 
-    study.optimize(objective, n_trials=50, timeout=600)
+    objective = create_objective(config_file_name, model_dir)
+    study.optimize(objective, n_trials=50)
 
     print("Number of finished trials: ", len(study.trials))
     print("Best trial:")
@@ -68,7 +95,7 @@ if __name__ == "__main__":
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
 
-    dump_best_config(CONFIG_PATH, BEST_CONFIG_PATH, study)
+    dump_best_config(os.path.join(EXAMPLE_DIR, config_file_name), BEST_CONFIG_PATH, study)
     print("\nCreated optimized AllenNLP config to `{}`.".format(BEST_CONFIG_PATH))
 
-    shutil.rmtree(MODEL_DIR)
+    shutil.rmtree(model_dir)
