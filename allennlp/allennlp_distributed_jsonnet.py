@@ -23,9 +23,9 @@ import allennlp
 # This path trick is used since this example is also
 # run from the root of this repository by CI.
 EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(EXAMPLE_DIR, "classifier.jsonnet")
-MODEL_DIR = "result_single"
-BEST_CONFIG_PATH = "best_classifier.json"
+CONFIG_PATH = os.path.join(EXAMPLE_DIR, "classifier_distributed.jsonnet")
+MODEL_DIR = "result_multi"
+BEST_CONFIG_PATH = "best_classifier_multi.json"
 
 
 def objective(trial):
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         storage="sqlite:///allennlp.db",
         pruner=optuna.pruners.HyperbandPruner(),
         sampler=optuna.samplers.TPESampler(seed=10),
-        study_name="allennlp_jsonnet_single",
+        study_name="allennlp_jsonnet_multi",
         load_if_exists=True,
     )
 
