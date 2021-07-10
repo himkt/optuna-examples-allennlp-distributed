@@ -75,7 +75,4 @@ local ENCODER = CNN_FIELDS(
       },
     ],
   },
-  // distributed: {
-  //   cuda_devices: [0, 1, 2, 3],
-  // },
 }

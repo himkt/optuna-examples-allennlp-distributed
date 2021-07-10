@@ -74,8 +74,9 @@ if __name__ == "__main__":
         load_if_exists=True,
     )
 
+    objective = create_objective(config_file_name, model_dir)
     # study.optimize(objective, n_trials=50, timeout=600)
-    study.optimize(create_objective(config_file_name, model_dir), n_trials=50)
+    study.optimize(objective, n_trials=40)
 
     print("Number of finished trials: ", len(study.trials))
     print("Best trial:")
