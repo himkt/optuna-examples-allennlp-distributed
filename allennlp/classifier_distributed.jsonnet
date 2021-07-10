@@ -60,7 +60,6 @@ local ENCODER = CNN_FIELDS(
     batch_size: 256,
   },
   trainer: {
-    // cuda_device: 0,
     num_epochs: 30,
     optimizer: {
       lr: 0.1,
