@@ -10,12 +10,12 @@ we here use the validation dataset instead.
 """
 
 import argparse
-import os.path
+import os
 import shutil
 
 import optuna
-from optuna.integration import AllenNLPExecutor
 from optuna.integration.allennlp import dump_best_config
+from optuna.integration import AllenNLPExecutor
 from packaging import version
 
 import allennlp
@@ -46,16 +46,19 @@ def create_objective(config_file_name, model_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--distributed", action="store_true")
+    parser.add_argument("--device", nargs="+", default=[-1], type=int)
     args = parser.parse_args()
 
-    if args.distributed:
-        config_file_name = "classifier_distributed.jsonnet"
-        model_dir = "result_multi"
-        study_name = "allennlp_jsonnet_multi"
-    else:
+    if len(args.device) == 1:
         config_file_name = "classifier.jsonnet"
         model_dir = "result_single"
         study_name = "allennlp_jsonnet_single"
+        os.environ["CUDA_DEVICE"] = str(args.device[0])
+    else:
+        config_file_name = "classifier_distributed.jsonnet"
+        model_dir = "result_multi"
+        study_name = "allennlp_jsonnet_multi"
+        os.environ["CUDA_DEVICES"] = str(args.device)
 
     if version.parse(allennlp.__version__) < version.parse("2.0.0"):
         raise RuntimeError(

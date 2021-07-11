@@ -75,6 +75,6 @@ local ENCODER = CNN_FIELDS(
     ],
   },
   distributed: {
-    cuda_devices: [1, 2, 3, 4],
+    cuda_devices: std.parseJson(std.extVar("CUDA_DEVICES")),
   },
 }

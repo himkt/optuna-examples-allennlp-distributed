@@ -60,7 +60,7 @@ local ENCODER = CNN_FIELDS(
     batch_size: 64,
   },
   trainer: {
-    cuda_device: 0,
+    cuda_device: std.parseInt(std.extVar("CUDA_DEVICE")),
     num_epochs: 30,
     optimizer: {
       lr: 0.1,
