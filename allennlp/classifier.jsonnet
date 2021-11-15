@@ -71,7 +71,7 @@ local ENCODER = CNN_FIELDS(
     callbacks: [
       {
         type: 'optuna_pruner',
-        monitor: 'best_validation_accuracy',
+        monitor: 'best_validation_loss',
       },
     ],
   },

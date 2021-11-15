@@ -30,10 +30,10 @@ BEST_CONFIG_PATH = "best_classifier.json"
 def create_objective(config_file_name, model_dir):
     def objective(trial):
         trial.suggest_float("DROPOUT", 0.0, 1.0)
-        trial.suggest_int("EMBEDDING_DIM", 16, 512)
+        trial.suggest_int("EMBEDDING_DIM", 16, 64)
         trial.suggest_int("MAX_FILTER_SIZE", 3, 6)
-        trial.suggest_int("NUM_FILTERS", 16, 256)
-        trial.suggest_int("HIDDEN_SIZE", 16, 256)
+        trial.suggest_int("NUM_FILTERS", 16, 32)
+        trial.suggest_int("HIDDEN_SIZE", 16, 32)
 
         config_path = os.path.join(EXAMPLE_DIR, config_file_name)
         serialization_dir = os.path.join(model_dir, "test_{}".format(trial.number))
@@ -45,7 +45,6 @@ def create_objective(config_file_name, model_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--distributed", action="store_true")
     parser.add_argument("--device", nargs="+", default=[-1], type=int)
     args = parser.parse_args()
 
@@ -68,10 +67,18 @@ if __name__ == "__main__":
             " https://github.com/optuna/optuna/blob/v2.5.0/examples/allennlp/allennlp_jsonnet.py"
         )
 
+    # storage_url = "sqlite:///allennlp.db"
+    # storage_url = "postgresql://root:root@127.0.0.1:5432/optuna"
+    storage_url = "mysql://root:root@127.0.0.1:3306/optuna"
+
     study = optuna.create_study(
         direction="maximize",
-        storage="sqlite:///allennlp.db",
+        storage=storage_url,
         pruner=optuna.pruners.HyperbandPruner(),
+        # pruner=optuna.pruners.ThresholdPruner(lower=0, upper=0.3),
+        # pruner=optuna.pruners.MedianPruner(),
+        # pruner=optuna.pruners.SuccessiveHalvingPruner(),
+        # pruner=optuna.pruners.PercentilePruner(percentile=30.0),
         sampler=optuna.samplers.TPESampler(seed=10),
         study_name=study_name,
         load_if_exists=True,
@@ -79,7 +86,7 @@ if __name__ == "__main__":
 
     objective = create_objective(config_file_name, model_dir)
     # study.optimize(objective, n_trials=50, timeout=600)
-    study.optimize(objective, n_trials=40)
+    study.optimize(objective, n_trials=50)
 
     print("Number of finished trials: ", len(study.trials))
     print("Best trial:")
